@@ -69,13 +69,17 @@ def populate_metadata(client, conn, script_params):
         omero_object = PlateI(long(object_id), False)
     else:
         omero_object = ScreenI(long(object_id), False)
-    ctx = ParsingContext(client, omero_object, "")
+    delimiter = ","
+    if (script_params["Delimiter"] == "Tab"):
+        delimiter = "\t"
+    ctx = ParsingContext(client, omero_object, "", delimiter)
     ctx.parse_from_handle(file_handle)
     ctx.write_to_omero()
 
 
 if __name__ == "__main__":
     dataTypes = [rstring('Plate'), rstring('Screen')]
+    delimiters = [rstring('Comma'), rstring('Tab')]
     client = scripts.client(
         'Populate_Metadata.py',
         """
@@ -93,7 +97,11 @@ if __name__ == "__main__":
             "File_ID", optional=False, grouping="3", default='',
             description="File ID containing metadata to populate."),
 
-        version="0.2",
+        scripts.String(
+            "Delimiter", optional=False, grouping="4", values=delimiters,
+            default='Comma'),
+
+        version="0.3",
         authors=["Emil Rozbicki"],
         institutions=["Glencoe Software Inc."],
         contact="emil@glencoesoftware.com",
