@@ -22,13 +22,10 @@
 Populate metadata from CSV.
 '''
 
-import omero
 from omero.gateway import BlitzGateway
 from omero.rtypes import rstring
 import omero.scripts as scripts
 from omero.model import PlateI, ScreenI
-
-import sys
 
 from omero.util.populate_roi import DownloadingOriginalFileProvider
 from omero.util.populate_metadata import ParsingContext
