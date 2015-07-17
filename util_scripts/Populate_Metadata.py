@@ -1,7 +1,7 @@
 # coding=utf-8
 '''
 -----------------------------------------------------------------------------
-  Copyright (C) 2014 Glencoe Software, Inc. All rights reserved.
+  Copyright (C) 2015 Glencoe Software, Inc. All rights reserved.
 
 
   This program is free software; you can redistribute it and/or modify
@@ -34,44 +34,23 @@ from omero.util.populate_roi import DownloadingOriginalFileProvider
 from omero.util.populate_metadata import ParsingContext
 
 
-def get_original_file(conn, object_type, object_id, file_id):
-    if object_type == "Plate":
-        omero_object = conn.getObject("Plate", int(object_id))
-        if omero_object is None:
-            sys.stderr.write("Error: Plate does not exist.\n")
-            sys.exit(1)
-    else:
-        omero_object = conn.getObject("Screen", int(object_id))
-        if omero_object is None:
-            sys.stderr.write("Error: Screen does not exist.\n")
-            sys.exit(1)
-    file = None
-    for ann in omero_object.listAnnotations():
-        if isinstance(ann, omero.gateway.FileAnnotationWrapper):
-            print "File ID:", ann.getFile().getId(), ann.getFile().getName(),\
-                "Size:", ann.getFile().getSize()
-            if (ann.getFile().getId() == int(file_id)):
-                file = ann.getFile()._obj
-    if file is None:
-        sys.stderr.write("Error: File does not exist.\n")
-        sys.exit(1)
-    return file
-
-
 def populate_metadata(client, conn, script_params):
-    object_id = long(script_params["IDs"])
-    file_id = long(script_params["File_ID"])
-    original_file = get_original_file(
-        conn, script_params["Data_Type"], object_id, file_id)
-    provider = DownloadingOriginalFileProvider(conn)
-    file_handle = provider.get_original_file_data(original_file)
-    if script_params["Data_Type"] == "Plate":
-        omero_object = PlateI(long(object_id), False)
-    else:
-        omero_object = ScreenI(long(object_id), False)
-    ctx = ParsingContext(client, omero_object, "")
-    ctx.parse_from_handle(file_handle)
-    ctx.write_to_omero()
+    object_id = script_params["IDs"]
+    file_annotation_ids = script_params["File_Annotations"]
+    for file_annotation_id in file_annotation_ids:
+        file_annotation = conn.getObject("FileAnnotation", file_annotation_id)
+        print "Populating data from %s" % file_annotation.getFileName()
+        original_file = file_annotation.getFile()._obj
+        provider = DownloadingOriginalFileProvider(conn)
+        file_handle = provider.get_original_file_data(original_file)
+        if script_params["Data_Type"] == "Plate":
+            omero_object = PlateI(long(object_id), False)
+        else:
+            omero_object = ScreenI(long(object_id), False)
+        ctx = ParsingContext(client, omero_object, "")
+        ctx.parse_from_handle(file_handle)
+        ctx.write_to_omero()
+    return "All done."
 
 
 if __name__ == "__main__":
@@ -85,15 +64,16 @@ if __name__ == "__main__":
             description="Choose source of images",
             values=dataTypes, default="Plate"),
 
-        scripts.String(
+        scripts.Long(
             "IDs", optional=False, grouping="2",
-            description="List of Image IDs to process."),
+            description="Object IDs."),
 
-        scripts.String(
-            "File_ID", optional=False, grouping="3", default='',
-            description="File ID containing metadata to populate."),
+        scripts.List(
+            "File_Annotations", optional=False, grouping="3",
+            description="File annotation IDs containing metadata to populate."
+        ).ofType(long),
 
-        version="0.2",
+        version="0.3",
         authors=["Emil Rozbicki"],
         institutions=["Glencoe Software Inc."],
         contact="emil@glencoesoftware.com",
