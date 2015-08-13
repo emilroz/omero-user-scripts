@@ -66,7 +66,7 @@ if __name__ == "__main__":
             description="Object IDs."),
 
         scripts.List(
-            "File_Annotations", optional=False, grouping="3",
+            "File_Annotation", optional=False, grouping="3",
             description="File annotation IDs containing metadata to populate."
         ).ofType(long),
 
