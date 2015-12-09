@@ -47,12 +47,18 @@ class renameChannels:
         self.image_id_list = []
         self.query_service = self.conn.getQueryService()
         self.update_service = self.conn.getUpdateService()
+        self.get_image_ids_query = \
+            "select distinct i.id from Image i" \
+            " left outer join i.pixels as p" \
+            " left outer join p.channels as c" \
+            " join c.logicalChannel as lc" \
+            " where lc.id in (:ids)"
         self.get_image_query = \
             "select i from Image i" \
             " left outer join fetch i.pixels as p" \
             " left outer join fetch p.channels as c" \
             " join fetch c.logicalChannel as lc" \
-            " where lc.id in (:ids)"
+            " where i.id in (:ids)"
         self.well_query = "select distinct lc.id" \
             " from Well as w" \
             " join w.wellSamples as ws" \
@@ -127,7 +133,10 @@ class renameChannels:
         for c in range(image_noc):
             lc_id = image.getPrimaryPixels().getChannel(c). \
                 getLogicalChannel().getId().getValue()
-            lc_ids_list.remove(lc_id)
+            try:
+                lc_ids_list.remove(lc_id)
+            except ValueError:
+                print '\tWARN: %s not in the list' % lc_id
         return lc_ids_list
 
     def renameLCs(self, image):
@@ -146,6 +155,11 @@ class renameChannels:
         while len(lc_ids_batch) > 0:
             params.page(counter * paging, paging)
             counter += 1
+            image_ids = query_service.projection(
+            get_image_ids_query, params, ctx)
+            image_ids = [image_ids[0].val for image_ids in image_ids]
+            image_list_params = omero.sys.ParametersI()
+            image_list_params.addIds(image_ids)
             image_list = self.query_service.findAllByQuery(
                 self.get_image_query, params)
             print "Retrived %i images" % len(image_list)
@@ -164,7 +178,9 @@ class renameChannels:
                     lc_ids_batch = self.removeLCsFromList(image, lc_ids_batch)
                     continue
                 self.renameLCs(image)
+                print 'Clearing full lc list.'
                 lc_ids = self.removeLCsFromList(image, lc_ids)
+                print 'Clearing batch list.'
                 lc_ids_batch = self.removeLCsFromList(image, lc_ids_batch)
             self.updateImageNames(image_list)
 
