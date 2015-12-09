@@ -155,13 +155,13 @@ class renameChannels:
         while len(lc_ids_batch) > 0:
             params.page(counter * paging, paging)
             counter += 1
-            image_ids = query_service.projection(
-            get_image_ids_query, params, ctx)
+            image_ids = self.query_service.projection(
+                self.get_image_ids_query, params)
             image_ids = [image_ids[0].val for image_ids in image_ids]
             image_list_params = omero.sys.ParametersI()
             image_list_params.addIds(image_ids)
             image_list = self.query_service.findAllByQuery(
-                self.get_image_query, params)
+                self.get_image_query, image_list_params)
             print "Retrived %i images" % len(image_list)
             for image in image_list:
                 check_lc = image.getPrimaryPixels().getChannel(0). \
